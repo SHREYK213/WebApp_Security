@@ -78,7 +78,7 @@ namespace WebApp.Pages.Account
     public class RegisterViewModel
     {
         [Required]
-        [EmailAddress(ErrorMessage ="Invalid email address.")]
+        [EmailAddress(ErrorMessage ="Invalid email address!")]
         public string Email { get; set; }
 
         [Required]
