@@ -4,20 +4,26 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net;
 using System.Net.Mail;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using WebApp.Data.Account;
+using WebApp.Services;
 
 namespace WebApp.Pages.Account
 {
     public class RegisterModel : PageModel
     {
-        private readonly UserManager<IdentityUser> userManager;
+        private readonly UserManager<User> userManager;
+        private readonly IEmailService emailService;
 
-        public RegisterModel(UserManager<IdentityUser> userManager)
+        public RegisterModel(UserManager<User> userManager,
+            IEmailService emailService)
         {
             this.userManager = userManager;
+            this.emailService = emailService;
         }
 
         [BindProperty]
@@ -34,32 +40,29 @@ namespace WebApp.Pages.Account
             // Validating Email address (Optional)
 
             // Create the user 
-            var user = new IdentityUser
+            var user = new User
             {
                 Email = RegisterViewModel.Email,
                 UserName = RegisterViewModel.Email
             };
 
+            var claimDepartment = new Claim("Department", RegisterViewModel.Department);
+            var claimPosition = new Claim("Position", RegisterViewModel.Position);
+
             var result = await this.userManager.CreateAsync(user, RegisterViewModel.Password);
             if (result.Succeeded)
             {
+                await this.userManager.AddClaimAsync(user, claimDepartment);
+                await this.userManager.AddClaimAsync(user, claimPosition);
+
                 var confirmationToken = await this.userManager.GenerateEmailConfirmationTokenAsync(user);
                 var confirmationLink = Url.PageLink(pageName: "/Account/ConfirmEmail",
                     values: new { userId = user.Id, token = confirmationToken });
 
-                var message = new MailMessage("shreyaspoojary240@gmail.com",
+                await emailService.SendAsync("shreyaspoojary21300@gmail.com",
                     user.Email,
-                    "Please confirm your email",
+                    "Please confirm your Email",
                     $"Please click on this link to confirm your email address: {confirmationLink}");
-
-                using (var emailClient = new SmtpClient("smtp-relay.sendinblue.com", 587))
-                {
-                    emailClient.Credentials = new NetworkCredential(
-                        "shreyaspoojary240@gmail.com",
-                        "wTjnFpYtJkarW9Ey");
-
-                    await emailClient.SendMailAsync(message);
-                }
 
                 return RedirectToPage("/Account/Login");
             }
@@ -78,11 +81,17 @@ namespace WebApp.Pages.Account
     public class RegisterViewModel
     {
         [Required]
-        [EmailAddress(ErrorMessage ="Invalid email address!")]
+        [EmailAddress(ErrorMessage = "Invalid email address!")]
         public string Email { get; set; }
 
         [Required]
-        [DataType(dataType:DataType.Password)]
+        [DataType(dataType: DataType.Password)]
         public string Password { get; set; }
+
+        [Required]
+        public string Department { get; set; }
+
+        [Required]
+        public string Position { get; set; }
     }
 }

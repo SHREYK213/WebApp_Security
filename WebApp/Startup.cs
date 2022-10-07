@@ -11,6 +11,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using WebApp.Data;
+using WebApp.Data.Account;
+using WebApp.Services;
+using WebApp.Settings;
 
 namespace WebApp
 {
@@ -25,14 +28,14 @@ namespace WebApp
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
-        
+
         {
             services.AddDbContext<ApplicationDbContext>(options =>
             {
                 options.UseSqlServer(Configuration.GetConnectionString("Default"));
             });
 
-            services.AddIdentity<IdentityUser, IdentityRole>(options =>
+            services.AddIdentity<User, IdentityRole>(options =>
             {
                 options.Password.RequiredLength = 8;
                 options.Password.RequireLowercase = true;
@@ -45,13 +48,16 @@ namespace WebApp
                 options.SignIn.RequireConfirmedEmail = true;
             })
             .AddEntityFrameworkStores<ApplicationDbContext>()
-            .AddDefaultTokenProviders();        
+            .AddDefaultTokenProviders();
 
             services.ConfigureApplicationCookie(options =>
             {
                 options.LoginPath = "/Account/Login";
                 options.AccessDeniedPath = "/Account/AccessDenied";
             });
+            services.Configure<SmtpSetting>(Configuration.GetSection("SMTP"));
+
+            services.AddSingleton<IEmailService, EmailService>();
 
             services.AddRazorPages();
         }
